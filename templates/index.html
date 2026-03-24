@@ -247,11 +247,13 @@
             progress.classList.add('active');
             progressText.textContent = '動画をダウンロード中...';
 
-            // プログレス表示を段階的に更新
+            // プログレス表示を段階的に更新（長い動画対応）
             const steps = [
                 { time: 10000, text: '音声を抽出中...' },
-                { time: 30000, text: '文字起こし中（少し時間がかかります）...' },
-                { time: 90000, text: '議事録を作成中...' },
+                { time: 60000, text: '音声をダウンロード中（長い動画は時間がかかります）...' },
+                { time: 180000, text: '文字起こし中...' },
+                { time: 360000, text: '文字起こし中（もう少しお待ちください）...' },
+                { time: 600000, text: '議事録を作成中...' },
             ];
             const timers = steps.map(s =>
                 setTimeout(() => progressText.textContent = s.text, s.time)

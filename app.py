@@ -28,13 +28,13 @@ def download_audio(vimeo_url):
         "yt-dlp",
         "-x",
         "--audio-format", "mp3",
-        "--audio-quality", "0",
+        "--audio-quality", "5",
         "-o", output_path,
         "--no-check-certificates",
         vimeo_url,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if result.returncode != 0:
         raise Exception(f"ダウンロード失敗: {result.stderr}")
 
@@ -103,7 +103,7 @@ def summarize_with_ollama(transcript, with_timestamps=False):
             "prompt": prompt,
             "stream": False,
         },
-        timeout=300,
+        timeout=600,
     )
 
     if response.status_code != 200:
