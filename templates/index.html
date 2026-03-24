@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vimeo 議事録メーカー</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 32px;
+        }
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: #1ab7ea;
+        }
+        button {
+            padding: 14px 28px;
+            background: #1ab7ea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover { background: #0fa3d4; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .progress {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .progress.active { display: block; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #eee;
+            border-top: 4px solid #1ab7ea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-text {
+            color: #666;
+            font-size: 14px;
+        }
+        .result {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .result.active { display: block; }
+        .result h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .result-content {
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        .copy-btn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #f0f0f0;
+            color: #333;
+            font-size: 13px;
+            font-weight: normal;
+        }
+        .copy-btn:hover { background: #e0e0e0; }
+        .error {
+            display: none;
+            background: #fff0f0;
+            color: #c00;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        .error.active { display: block; }
+        .toggle-section {
+            cursor: pointer;
+            user-select: none;
+        }
+        .toggle-section::before {
+            content: "▼ ";
+            font-size: 12px;
+        }
+        .toggle-section.collapsed::before {
+            content: "▶ ";
+        }
+        .collapsible {
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+        .collapsible.collapsed {
+            max-height: 0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vimeo 議事録メーカー</h1>
+        <p class="subtitle">VimeoのURLを入力すると、動画の内容を議事録にまとめます</p>
+
+        <div class="input-group">
+            <input type="text" id="url" placeholder="https://vimeo.com/xxxxx">
+            <button id="btn" onclick="startTranscribe()">作成</button>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="progress" id="progress">
+            <div class="spinner"></div>
+            <p class="progress-text" id="progress-text">動画をダウンロード中...</p>
+        </div>
+
+        <div class="result" id="summary-result">
+            <h2>議事録</h2>
+            <div class="result-content" id="summary-content"></div>
+            <button class="copy-btn" onclick="copyText('summary-content')">コピー</button>
+        </div>
+
+        <div class="result" id="transcript-result">
+            <h2 class="toggle-section" onclick="toggleSection(this)">文字起こし（全文）</h2>
+            <div class="collapsible" id="transcript-wrapper">
+                <div class="result-content" id="transcript-content"></div>
+                <button class="copy-btn" onclick="copyText('transcript-content')">コピー</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function startTranscribe() {
+            const url = document.getElementById('url').value.trim();
+            if (!url) return;
+
+            const btn = document.getElementById('btn');
+            const progress = document.getElementById('progress');
+            const progressText = document.getElementById('progress-text');
+            const error = document.getElementById('error');
+            const summaryResult = document.getElementById('summary-result');
+            const transcriptResult = document.getElementById('transcript-result');
+
+            btn.disabled = true;
+            error.classList.remove('active');
+            summaryResult.classList.remove('active');
+            transcriptResult.classList.remove('active');
+            progress.classList.add('active');
+            progressText.textContent = '動画をダウンロード中...';
+
+            // プログレス表示を段階的に更新
+            const steps = [
+                { time: 10000, text: '音声を抽出中...' },
+                { time: 30000, text: '文字起こし中（少し時間がかかります）...' },
+                { time: 90000, text: '議事録を作成中...' },
+            ];
+            const timers = steps.map(s =>
+                setTimeout(() => progressText.textContent = s.text, s.time)
+            );
+
+            try {
+                const res = await fetch('/transcribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+
+                const data = await res.json();
+                timers.forEach(clearTimeout);
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'エラーが発生しました');
+                }
+
+                document.getElementById('summary-content').textContent = data.summary;
+                document.getElementById('transcript-content').textContent = data.transcript;
+                summaryResult.classList.add('active');
+                transcriptResult.classList.add('active');
+
+            } catch (e) {
+                error.textContent = e.message;
+                error.classList.add('active');
+            } finally {
+                progress.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+
+        function copyText(id) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                btn.textContent = 'コピーしました!';
+                setTimeout(() => btn.textContent = 'コピー', 2000);
+            });
+        }
+
+        function toggleSection(el) {
+            const wrapper = el.nextElementSibling;
+            el.classList.toggle('collapsed');
+            wrapper.classList.toggle('collapsed');
+        }
+
+        // Enterキーで実行
+        document.getElementById('url').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startTranscribe();
+        });
+    </script>
+</body>
+</html>
