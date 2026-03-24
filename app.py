@@ -15,7 +15,7 @@ model = None
 def get_model():
     global model
     if model is None:
-        model = whisper.load_model("base")
+        model = whisper.load_model("medium")
     return model
 
 
@@ -29,6 +29,7 @@ def download_audio(vimeo_url):
         "-x",
         "--audio-format", "mp3",
         "--audio-quality", "5",
+        "--concurrent-fragments", "8",
         "-o", output_path,
         "--no-check-certificates",
         vimeo_url,
@@ -157,4 +158,4 @@ def transcribe():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5555)
+    app.run(debug=False, port=5555)
