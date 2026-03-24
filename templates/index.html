@@ -30,7 +30,53 @@
         .input-group {
             display: flex;
             gap: 12px;
+            margin-bottom: 12px;
+        }
+        .options {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 24px;
+        }
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 24px;
+            transition: background 0.2s;
+        }
+        .toggle-slider::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle input:checked + .toggle-slider {
+            background: #1ab7ea;
+        }
+        .toggle input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+        }
+        .options label:last-child {
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
         }
         input[type="text"] {
             flex: 1;
@@ -152,6 +198,14 @@
             <button id="btn" onclick="startTranscribe()">作成</button>
         </div>
 
+        <div class="options">
+            <label class="toggle">
+                <input type="checkbox" id="timestamps">
+                <span class="toggle-slider"></span>
+            </label>
+            <label for="timestamps">タイムスタンプ付き</label>
+        </div>
+
         <div class="error" id="error"></div>
 
         <div class="progress" id="progress">
@@ -204,10 +258,11 @@
             );
 
             try {
+                const timestamps = document.getElementById('timestamps').checked;
                 const res = await fetch('/transcribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url }),
+                    body: JSON.stringify({ url, timestamps }),
                 });
 
                 const data = await res.json();
